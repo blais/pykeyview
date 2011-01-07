@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 """
-A live keyviewer uses OSD, for making demos and presentations.
+A live keystrokes viewer which uses OSD, for making live demos and presentations.
 
-When this was written, it was for a demo of an Emacs-related topic. Some of the
-way the keys are displayed _may_ (or not) be influenced by that.
+This was written for a presentation on the Emacs editor. Some of the default
+options may reflect that, but otherwise this program is a generic key viewer and
+could be reused in various contexts.
 """
 __author__ = 'Martin Blais <blais@furius.ca>'
-# Note: A whole bunch of this code was copied from Matt Harrison's pykeyview and
-# revamped for the osd version.
+__copyright__ = 'BSD License'
+# Note: Some of this code was adapted from Matt Harrison's pykeyview.
 
 import string
 from time import sleep
@@ -60,6 +61,7 @@ color = "white"
 
 
 
+# Declare modifiers, and map the appearance of modifiers.
 MODIFIERS = {
     'Control_L': 'C-',
     'Control_R': 'C-',
@@ -71,7 +73,7 @@ MODIFIERS = {
     'Shift_R': '',
     }
 
-# Alter the appearance of some key events
+# Map the appearance of selected key events for compactness.
 KEY_MAP = {
     'Return': 'RET', #'\n',
     'space': 'SPC',
@@ -119,7 +121,7 @@ keystack = [] # stack of keys typed
 
 
 class TimingDevice:
-    "A slightly more abstract and convenient timer."
+    """ A slightly more abstract and convenient timer, which can be restarted."""
 
     def __init__(self, callback, timeout):
         self.timer = None
@@ -140,6 +142,7 @@ class TimingDevice:
 
 
 def get_modifiers():
+    "Return a string that renders to the current modifiers."
     return ''.join(sorted(MODIFIERS.get(m, '') for m in pressed_modifiers))
 
 def on_keyup(event):
@@ -190,6 +193,7 @@ def gettext():
     return oss.getvalue().strip()
 
 def update():
+    "Redisplay the current text."
     text = gettext()
     if not text:
         osd.hide()
@@ -209,6 +213,7 @@ def update():
 
 
 def on_hide():
+    "Hide the text (usually after a long delay)."
     if not pressed_modifiers:
         osd.hide()
         keystack[:] = []
@@ -220,11 +225,13 @@ tm_hide = TimingDevice(on_hide, timeout_hide)
 
 
 def on_showmod():
+    "Display the current modifiers."
     if pressed_modifiers:
         global show_modifiers; show_modifiers = True
     update()
 
 def reset_showmod():
+    "Don't display the current modifiers anymore."
     global show_modifiers; show_modifiers = False
     if modifier_display is DELAYED:
         tm_showmod.reset()
@@ -234,6 +241,7 @@ tm_showmod = TimingDevice(on_showmod, timeout_showmod)
 
 
 def on_gap():
+    "Insert a gap in the text stream."
     keystack.append(gapchars)
     update()
     tm_gap.cancel()
