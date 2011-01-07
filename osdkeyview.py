@@ -31,6 +31,10 @@ modifier_display = NODISPLAY
 # I use 'Super' here because it's my winmgr key.
 ignore_modifiers = set(['Super_L', 'Super_R'])
 
+# Some special key sequences to highlight.
+highlight_keys = set(['C-g'])
+highlight_pat = '  %s  '
+
 # The maximum nb. of characters to display on a line.
 limit_chars = 44
 
@@ -69,7 +73,7 @@ MODIFIERS = {
 
 # Alter the appearance of some key events
 KEY_MAP = {
-    'Return': '\n',
+    'Return': 'RET', #'\n',
     'space': 'SPC',
     'parenleft': '(',
     'parenright': ')',
@@ -98,6 +102,8 @@ KEY_MAP = {
     'backslash' : '\\',
     'question' : '?',
     'BackSpace' : '<-',
+    'Tab' : 'TAB',
+    'Escape' : 'ESC',
     }
 
 
@@ -174,6 +180,8 @@ def gettext():
     oss = StringIO()
     prev = True
     for k in allkeys:
+        if k in highlight_keys:
+            k = highlight_pat % k
         cur = len(k) == 1
         if not (prev and  cur):
             oss.write(' ')
