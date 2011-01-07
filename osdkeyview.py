@@ -4,7 +4,7 @@ A live keyviewer uses OSD, for making demos and presentations.
 
 When this was written, it was for a demo of an Emacs-related topic. Some of the
 way the keys are displayed _may_ (or not) be influenced by that. I wrote this
-fast, so it'll like it's put together with duct-tape.
+fast, so it'll look it's put together with duct-tape.
 """
 __author__ = 'Martin Blais <blais@furius.ca>'
 # Note: A whole bunch of this code was copied from Matt Harrison's pykeyview and
@@ -24,8 +24,8 @@ MODIFIERS = {
     'Alt_R': 'M-',
     'Super_L': 'S-',
     'Super_R': 'S-',
-    'Shift_L': 'S-',
-    'Shift_R': 'S-',
+    'Shift_L': '',
+    'Shift_R': '',
     }
 
 # Alter the appearance of some key events
@@ -66,11 +66,11 @@ keys = [] # stack of keys typed
 
 show_backspace = False
 show_transients = False
-limit_chars = 60
+limit_chars = 44
 
 timer = None
 
-hide_timeout = 1.5
+hide_timeout = 1.1
 
 
 
@@ -108,7 +108,7 @@ def gettext():
             oss.write(' ')
         oss.write(k)
         prev = cur
-    return oss.getvalue()
+    return oss.getvalue().strip()
 
 def update():
     text = gettext()
@@ -131,7 +131,6 @@ def update():
     timer = Timer(hide_timeout, on_timeout)
     timer.start()
 
-
 def on_timeout():
     osd.hide()
     keys[:] = []
@@ -148,6 +147,9 @@ def get_hook_manager():
 
 
 font = '-*-lucidatypewriter-*-r-*-*-34-*-*-*-*-*-*-*'
+font = "-adobe-helvetica-bold-r-normal-*-*-320-*-*-p-*-*"
+font = "-adobe-helvetica-bold-r-normal-*-*-480-*-*-p-*-*"
+font = "-adobe-helvetica-bold-r-normal-*-*-400-*-*-p-*-*"
 
 def main():
     import optparse
@@ -155,25 +157,29 @@ def main():
     opts, args = parser.parse_args()
 
     global osd
-    osd = pyosd.osd(font, "black",
+    osd = pyosd.osd(font, "#22B022",
                     timeout=-1,
                     pos=pyosd.POS_BOT,
-                    lines=1)
+                    lines=2, # leave space for minibuffer
+                    shadow=2,
+                    )
 
     hm = get_hook_manager()
 
     # Allow interrupts.
     import signal; signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-
 if __name__ == '__main__':
     main()
 
-# FIXME: TODO --
-# ignore Super modifier,
-# display transients modifiers
-# establish a delay for transient modifiers (hysteresis)
-# insert a spacer when paused,
-# deal with overflow of line
-# don't make the characters disappear as long as I'm holding a modifier key
-# Perhaps insert two spaces where there is a longer pause.
+#-------------------------------------------------------------------------------
+# FIXME: TODO
+# Add an option to ignore the Super modifier
+# May make unmodified SPC behave like any other character
+# Display transients modifiers
+# Establish a delay for transient modifiers (hysteresis)
+# Insert a spacer when paused
+# Deal with overflow of line
+# Don't make the characters disappear as long as I'm holding a modifier key
+# Perhaps insert two spaces where there is a longer pause
+# Make some of the parameters cmdline options
