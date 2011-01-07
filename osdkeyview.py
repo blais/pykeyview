@@ -22,7 +22,7 @@ Options (many of these could be cmdline arguments).
 """
 
 # Whether we should display the backspace char.
-show_backspace = False
+show_backspace = True
 
 # True if we should always display the intermediate state of modifiers.
 IMMEDIATE, DELAYED, NODISPLAY = map(lambda x: object(), xrange(3))
@@ -37,7 +37,7 @@ highlight_keys = set(['C-g'])
 highlight_pat = '  %s  '
 
 # The maximum nb. of characters to display on a line.
-limit_chars = 44
+limit_chars = 40
 
 # If set to a string, insert this string when there is a short time delay
 # between keystrokes. Insure this is at least a length of 2, so it's treated by
@@ -192,6 +192,23 @@ def gettext():
         prev = cur
     return oss.getvalue().strip()
 
+def len10(text):
+    """ Calculate the length of the text in 10ths. We do this in order to get an
+    accurate enough length estimate for scrolling."""
+    total = 0
+    for x in text:
+        # Note: these were fine-tuned for Helvetica.
+        if x in ' l1iIt':
+            total += 5
+        elif x in 'mMNwW':
+            total += 15
+        elif x in string.uppercase:
+            total += 11
+        else:
+            total += 10
+    return total
+
+
 def update():
     "Redisplay the current text."
     text = gettext()
@@ -199,7 +216,7 @@ def update():
         osd.hide()
     else:
         while 1:
-            if len(text) < limit_chars:
+            if len10(text) < limit_chars*10:
                 break
             keystack.pop(0)
             text = gettext()
