@@ -10,8 +10,18 @@ is available under the terms of GPL2.
 requires
 ========
 
-python bindings for X >= 1.4
-xorg >= 1.7.6
+keyview.py:
+
+  python bindings for X >= 1.4
+  xorg >= 1.7.6
+  python-gtk
+
+osdkeyview.py:
+
+  python bindings for X >= 1.4
+  xorg >= 1.7.6
+  python-osd (xosd)
+
 
 Note
 ====
