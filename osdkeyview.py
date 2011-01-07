@@ -16,6 +16,45 @@ from StringIO import StringIO
 from threading import Timer
 import pyxhook, pyosd
 
+"""
+Options (many of these could be cmdline arguments).
+"""
+
+# Whether we should display the backspace char.
+show_backspace = False
+
+# True if we should always display the intermediate state of modifiers.
+IMMEDIATE, DELAYED, NODISPLAY = map(lambda x: object(), xrange(3))
+modifier_display = NODISPLAY
+
+# A set of modifiers to avoid displaying.
+# I use 'Super' here because it's my winmgr key.
+ignore_modifiers = set(['Super_L', 'Super_R'])
+
+# The maximum nb. of characters to display on a line.
+limit_chars = 44
+
+# If set to a string, insert this string when there is a short time delay
+# between keystrokes. Insure this is at least a length of 2, so it's treated by
+# display as a modifier and spaces are automatically inserted around it.
+gapchars = '  '; # '__'
+assert(len(gapchars) >= 2)
+
+# Various timeouts.
+timeout_hide    = 3.0  # Text hiding
+timeout_gap     = 0.6  # Insert a gap
+timeout_showmod = 0.8  # Show delayed modifiers
+
+# Appearance.
+font = '-*-lucidatypewriter-*-r-*-*-34-*-*-*-*-*-*-*'
+font = "-adobe-helvetica-bold-r-normal-*-*-320-*-*-p-*-*"
+font = "-adobe-helvetica-bold-r-normal-*-*-480-*-*-p-*-*"
+font = "-adobe-helvetica-bold-r-normal-*-*-400-*-*-p-*-*"
+
+color = "#22B022"
+color = "white"
+
+
 
 MODIFIERS = {
     'Control_L': 'C-',
@@ -58,19 +97,39 @@ KEY_MAP = {
     'slash' : '/',
     'backslash' : '\\',
     'question' : '?',
+    'BackSpace' : '<-',
     }
 
 
+
+# Current set of modifiers that are pressed.
 pressed_modifiers = set()
-keys = [] # stack of keys typed
 
-show_backspace = False
-show_transients = False
-limit_chars = 44
+# Current state of modifier display
+show_modifiers = False
 
-timer = None
+# The current list of character strings to display.
+keystack = [] # stack of keys typed
 
-hide_timeout = 1.1
+
+class TimingDevice:
+    "A slightly more abstract and convenient timer."
+
+    def __init__(self, callback, timeout):
+        self.timer = None
+        self.callback = callback
+        self.timeout = timeout
+
+    def reset(self):
+        if self.timer:
+            self.timer.cancel()
+        self.timer = Timer(self.timeout, self.callback)
+        self.timer.start()
+
+    def cancel(self):
+        if self.timer:
+            self.timer.cancel()
+        self.timer = None
 
 
 
@@ -88,17 +147,29 @@ def on_keydown(event):
     if key in MODIFIERS:
         pressed_modifiers.add(key)
     elif key == 'BackSpace' and not show_backspace:
-        pass
+        reset_showmod()
+        if gapchars: tm_gap.reset()
     else:
+        reset_showmod()
+        if gapchars: tm_gap.reset()
         typed = KEY_MAP.get(key, key)
-        keys.append(get_modifiers() + typed)
+        if not (ignore_modifiers & pressed_modifiers):
+            keystack.append(get_modifiers() + typed)
     update()
 
 def gettext():
     "Join strings with a space except between simple letters."
-    allkeys = keys
-    if show_transients:
-        allkeys.extend(get_modifiers())
+    allkeys = list(keystack)
+
+    if allkeys and allkeys[0] == gapchars:
+        allkeys.pop(0)
+    if allkeys and allkeys[-1] == gapchars:
+        allkeys.pop(-1)
+
+    if show_modifiers or modifier_display is IMMEDIATE:
+        if not (ignore_modifiers & pressed_modifiers):
+            allkeys.append(gapchars)
+            allkeys.extend(get_modifiers())
 
     oss = StringIO()
     prev = True
@@ -118,25 +189,53 @@ def update():
         while 1:
             if len(text) < limit_chars:
                 break
-            keys.pop(0)
+            keystack.pop(0)
             text = gettext()
 
         osd.display(text, line=0)
         osd.show()
 
-    # Reset the timer.
-    global timer
-    if timer:
-        timer.cancel()
-    timer = Timer(hide_timeout, on_timeout)
-    timer.start()
+    tm_hide.reset()
 
-def on_timeout():
-    osd.hide()
-    keys[:] = []
-    timer = None
+
+
+
+def on_hide():
+    if not pressed_modifiers:
+        osd.hide()
+        keystack[:] = []
+    tm_hide.cancel()
+
+tm_hide = TimingDevice(on_hide, timeout_hide) # Hide the text
+
+
+
+
+def on_showmod():
+    if pressed_modifiers:
+        global show_modifiers; show_modifiers = True
+    update()
+
+def reset_showmod():
+    global show_modifiers; show_modifiers = False
+    if modifier_display is DELAYED:
+        tm_showmod.reset()
+
+tm_showmod = TimingDevice(on_showmod, timeout_showmod) # Display modifiers
+
+
+
+def on_gap():
+    keystack.append(gapchars)
+    update()
+    tm_gap.cancel()
+
+tm_gap = TimingDevice(on_gap, timeout_gap) # Insert a gap
+
+
 
 def get_hook_manager():
+    "Setup and start the key snooper thread."
     hm = pyxhook.HookManager()
     hm.HookKeyboard()
     hm.HookMouse()
@@ -146,10 +245,6 @@ def get_hook_manager():
     return hm
 
 
-font = '-*-lucidatypewriter-*-r-*-*-34-*-*-*-*-*-*-*'
-font = "-adobe-helvetica-bold-r-normal-*-*-320-*-*-p-*-*"
-font = "-adobe-helvetica-bold-r-normal-*-*-480-*-*-p-*-*"
-font = "-adobe-helvetica-bold-r-normal-*-*-400-*-*-p-*-*"
 
 def main():
     import optparse
@@ -157,10 +252,10 @@ def main():
     opts, args = parser.parse_args()
 
     global osd
-    osd = pyosd.osd(font, "#22B022",
+    osd = pyosd.osd(font, color,
                     timeout=-1,
                     pos=pyosd.POS_BOT,
-                    lines=2, # leave space for minibuffer
+                    lines=1, # leave space for minibuffer
                     shadow=2,
                     )
 
@@ -171,15 +266,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-#-------------------------------------------------------------------------------
-# FIXME: TODO
-# Add an option to ignore the Super modifier
-# May make unmodified SPC behave like any other character
-# Display transients modifiers
-# Establish a delay for transient modifiers (hysteresis)
-# Insert a spacer when paused
-# Deal with overflow of line
-# Don't make the characters disappear as long as I'm holding a modifier key
-# Perhaps insert two spaces where there is a longer pause
-# Make some of the parameters cmdline options
