@@ -3,8 +3,7 @@
 A live keyviewer uses OSD, for making demos and presentations.
 
 When this was written, it was for a demo of an Emacs-related topic. Some of the
-way the keys are displayed _may_ (or not) be influenced by that. I wrote this
-fast, so it'll look it's put together with duct-tape.
+way the keys are displayed _may_ (or not) be influenced by that.
 """
 __author__ = 'Martin Blais <blais@furius.ca>'
 # Note: A whole bunch of this code was copied from Matt Harrison's pykeyview and
@@ -15,6 +14,7 @@ from time import sleep
 from StringIO import StringIO
 from threading import Timer
 import pyxhook, pyosd
+
 
 """
 Options (many of these could be cmdline arguments).
@@ -206,7 +206,7 @@ def on_hide():
         keystack[:] = []
     tm_hide.cancel()
 
-tm_hide = TimingDevice(on_hide, timeout_hide) # Hide the text
+tm_hide = TimingDevice(on_hide, timeout_hide)
 
 
 
@@ -221,7 +221,7 @@ def reset_showmod():
     if modifier_display is DELAYED:
         tm_showmod.reset()
 
-tm_showmod = TimingDevice(on_showmod, timeout_showmod) # Display modifiers
+tm_showmod = TimingDevice(on_showmod, timeout_showmod)
 
 
 
@@ -230,7 +230,7 @@ def on_gap():
     update()
     tm_gap.cancel()
 
-tm_gap = TimingDevice(on_gap, timeout_gap) # Insert a gap
+tm_gap = TimingDevice(on_gap, timeout_gap)
 
 
 
