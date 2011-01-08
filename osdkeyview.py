@@ -26,7 +26,7 @@ show_backspace = True
 
 # True if we should always display the intermediate state of modifiers.
 IMMEDIATE, DELAYED, NODISPLAY = map(lambda x: object(), xrange(3))
-modifier_display = NODISPLAY
+modifier_display = DELAYED
 
 # A set of modifiers to avoid displaying.
 # I use 'Super' here because it's my winmgr key.
@@ -154,6 +154,8 @@ def on_keydown(event):
     #hm.printevent(event)
     key = event.Key
     if key in MODIFIERS:
+        if not pressed_modifiers:
+            reset_showmod()
         pressed_modifiers.add(key)
     elif key == 'BackSpace' and not show_backspace:
         reset_showmod()
